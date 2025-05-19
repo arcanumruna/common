@@ -157,10 +157,10 @@ namespace agrona::concurrent::ringbuffer {
 
                         const std::int32_t alignedLength = aeron::util::BitUtil::align(
                             recordLength, aeron::concurrent::ringbuffer::RecordDescriptor::ALIGNMENT);
+                        bytesRead += alignedLength;
                         const std::int32_t msgTypeId = aeron::concurrent::ringbuffer::RecordDescriptor::messageTypeId(header);
 
                         if (msgTypeId == aeron::concurrent::ringbuffer::RecordDescriptor::PADDING_MSG_TYPE_ID) {
-                            bytesRead += alignedLength;
                             continue;
                         }
 
@@ -171,11 +171,11 @@ namespace agrona::concurrent::ringbuffer {
                             recordLength - aeron::concurrent::ringbuffer::RecordDescriptor::HEADER_LENGTH);
 
                         if (action == ControlledAction::ABORT) {
+                            bytesRead -= alignedLength;
                             break;
                         }
 
                         ++messagesRead;
-                        bytesRead += alignedLength;
 
                         if (action == ControlledAction::BREAK) {
                             break;

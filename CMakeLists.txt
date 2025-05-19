@@ -11,6 +11,7 @@ add_library(common INTERFACE
         include/concurrent/agrona/O2ORingBuffer.h
         include/concurrent/agrona/AgronaAtomicBuffer.h
         include/concurrent/agrona/AgronaRingBufferDescriptor.h
+        include/flow/ScopeExit.h
 )
 
 target_include_directories(common INTERFACE
@@ -28,7 +29,8 @@ add_library(common_dummy STATIC
         include/concurrent/agrona/M2ORingBuffer.h
         include/concurrent/agrona/O2ORingBuffer.h
         include/concurrent/agrona/AgronaAtomicBuffer.h
-        include/concurrent/agrona/AgronaRingBufferDescriptor.h)
+        include/concurrent/agrona/AgronaRingBufferDescriptor.h
+        include/flow/ScopeExit.h)
 
 target_include_directories(common_dummy PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
