@@ -1,19 +1,21 @@
 #pragma once
 
-#include <vector>
 #include <memory>
 #include <iterator>
 
 template<typename T>
 class ChunkedList {
     struct Chunk {
-        explicit Chunk(size_t capacity)
-            : data(capacity), count(0), next(nullptr) {}
+        Chunk(size_t capacity)
+            : data(new T[capacity]), count(0), capacity(capacity), next(nullptr) {}
 
-        bool isFull() const { return count == data.size(); }
+        ~Chunk() { delete[] data; }
 
-        std::vector<T> data;
+        bool isFull() const { return count == capacity; }
+
+        T* data;
         size_t count;
+        size_t capacity;
         std::unique_ptr<Chunk> next;
     };
 
@@ -24,10 +26,22 @@ class ChunkedList {
     Chunk* tail;
 
 public:
-    explicit ChunkedList(const size_t chunkSize = 64)
-        : chunkSize(chunkSize),
-          head(std::make_unique<Chunk>(chunkSize)),
-          tail(head.get()) {}
+    explicit ChunkedList(size_t chunkSize = 64, size_t preallocateChunks = 1)
+        : chunkSize(chunkSize) {
+        head = std::make_unique<Chunk>(chunkSize);
+        Chunk* current = head.get();
+
+        // Preallocate and chain chunks
+        for (size_t i = 1; i < preallocateChunks; ++i) {
+            current->next = std::make_unique<Chunk>(chunkSize);
+            current = current->next.get();
+        }
+
+        tail = head.get();  // tail points to last preallocated (empty) chunk
+        while (tail->next) {
+            tail = tail->next.get();
+        }
+    }
 
     void push_back(const T& value) {
         if (tail->isFull()) {
@@ -52,7 +66,6 @@ public:
 
     size_t size() const { return totalSize; }
 
-    // Optional: legacy functional foreach
     template<typename Fn>
     void forEach(Fn&& fn) const {
         for (const auto& val : *this) {
@@ -60,7 +73,6 @@ public:
         }
     }
 
-    // Iterator support
     class const_iterator {
     public:
         using value_type = T;
@@ -69,24 +81,19 @@ public:
         using difference_type = std::ptrdiff_t;
         using iterator_category = std::forward_iterator_tag;
 
-        const_iterator(const Chunk* chunk, const size_t chunkIndex, const size_t remaining)
-            : chunk(chunk), index(chunkIndex), remaining(remaining) {
+        const_iterator(const Chunk* chunk, size_t index, size_t remaining)
+            : chunk(chunk), index(index), remaining(remaining) {
             skipEmptyChunks();
         }
 
-        reference operator*() const {
-            return chunk->data[index];
-        }
-
-        pointer operator->() const {
-            return &chunk->data[index];
-        }
+        reference operator*() const { return chunk->data[index]; }
+        pointer operator->() const { return &chunk->data[index]; }
 
         const_iterator& operator++() {
             ++index;
             --remaining;
 
-            if (index >= chunk->count && chunk->next) {
+            if (chunk && index >= chunk->count) {
                 chunk = chunk->next.get();
                 index = 0;
                 skipEmptyChunks();
@@ -118,5 +125,4 @@ public:
     const_iterator end() const {
         return const_iterator(nullptr, 0, 0);
     }
-
 };

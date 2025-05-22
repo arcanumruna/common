@@ -437,6 +437,18 @@ public:
         return static_cast<std::int32_t>(sizeof(std::int32_t)) + length;
     }
 
+    std::int32_t putString(aeron::util::index_t offset, const std::string_view &value)
+    {
+        auto length = static_cast<std::int32_t>(value.length());
+
+        boundsCheck(offset, value.length() + sizeof(length));
+
+        ::memcpy(m_buffer + offset, reinterpret_cast<const char *>(&length), sizeof(length));
+        ::memcpy(m_buffer + offset + sizeof(length), value.data(), value.length());
+
+        return static_cast<std::int32_t>(sizeof(std::int32_t)) + length;
+    }
+
     std::int32_t COND_MOCK_VIRTUAL putStringWithoutLength(aeron::util::index_t offset, const std::string &value)
     {
         boundsCheck(offset, value.length());
