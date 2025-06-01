@@ -209,16 +209,74 @@ public:
         return *reinterpret_cast<std::float_t *>(m_buffer + offset);
     }
 
+    inline COND_MOCK_VIRTUAL std::float_t getFloat_BE(aeron::util::index_t offset) const
+    {
+        boundsCheck(offset, sizeof(std::float_t));
+
+        uint8_t bytes[4];
+        std::memcpy(bytes, m_buffer + offset, 4);
+
+        uint32_t intRep =
+            (static_cast<uint32_t>(bytes[0]) << 24) |
+            (static_cast<uint32_t>(bytes[1]) << 16) |
+            (static_cast<uint32_t>(bytes[2]) << 8) |
+            (static_cast<uint32_t>(bytes[3]));
+
+        float value;
+        std::memcpy(&value, &intRep, sizeof(float));
+        return value;
+    }
+
+    // Write float in big-endian order
+    inline COND_MOCK_VIRTUAL void putFloat_BE(aeron::util::index_t offset, std::float_t v)
+    {
+        boundsCheck(offset, sizeof(std::float_t));
+
+        uint32_t intRep;
+        std::memcpy(&intRep, &v, sizeof(float));
+
+        m_buffer[offset + 0] = static_cast<uint8_t>((intRep >> 24) & 0xFF);
+        m_buffer[offset + 1] = static_cast<uint8_t>((intRep >> 16) & 0xFF);
+        m_buffer[offset + 2] = static_cast<uint8_t>((intRep >> 8) & 0xFF);
+        m_buffer[offset + 3] = static_cast<uint8_t>(intRep & 0xFF);
+    }
+
     inline COND_MOCK_VIRTUAL void putInt32(aeron::util::index_t offset, std::int32_t v)
     {
         boundsCheck(offset, sizeof(std::int32_t));
         *reinterpret_cast<std::int32_t *>(m_buffer + offset) = v;
     }
 
+    inline COND_MOCK_VIRTUAL void putInt32_BE(aeron::util::index_t offset, std::int32_t v)
+    {
+        boundsCheck(offset, sizeof(std::int32_t));
+
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(m_buffer + offset);
+        uint32_t uv = static_cast<uint32_t>(v);
+
+        ptr[0] = static_cast<uint8_t>((uv >> 24) & 0xFF);
+        ptr[1] = static_cast<uint8_t>((uv >> 16) & 0xFF);
+        ptr[2] = static_cast<uint8_t>((uv >> 8) & 0xFF);
+        ptr[3] = static_cast<uint8_t>(uv & 0xFF);
+    }
+
     inline COND_MOCK_VIRTUAL std::int32_t getInt32(aeron::util::index_t offset) const
     {
         boundsCheck(offset, sizeof(std::int32_t));
         return *reinterpret_cast<std::int32_t *>(m_buffer + offset);
+    }
+
+    inline COND_MOCK_VIRTUAL std::int32_t getInt32_BE(aeron::util::index_t offset) const
+    {
+        boundsCheck(offset, sizeof(std::int32_t));
+
+        const uint8_t* ptr = reinterpret_cast<const uint8_t*>(m_buffer + offset);
+        uint32_t uv = (static_cast<uint32_t>(ptr[0]) << 24) |
+                      (static_cast<uint32_t>(ptr[1]) << 16) |
+                      (static_cast<uint32_t>(ptr[2]) << 8)  |
+                      static_cast<uint32_t>(ptr[3]);
+
+        return static_cast<std::int32_t>(uv);
     }
 
     inline COND_MOCK_VIRTUAL std::int16_t getInt16(aeron::util::index_t offset) const
@@ -243,6 +301,18 @@ public:
     {
         boundsCheck(offset, sizeof(std::uint16_t));
         *reinterpret_cast<std::uint16_t *>(m_buffer + offset) = v;
+    }
+
+    inline std::int8_t getInt8(aeron::util::index_t offset) const
+    {
+        boundsCheck(offset, sizeof(std::int8_t));
+        return *reinterpret_cast<std::int8_t *>(m_buffer + offset);
+    }
+
+    inline COND_MOCK_VIRTUAL void putInt8(aeron::util::index_t offset, std::int8_t v)
+    {
+        boundsCheck(offset, sizeof(std::int8_t));
+        *reinterpret_cast<std::int8_t *>(m_buffer + offset) = v;
     }
 
     inline std::uint8_t getUInt8(aeron::util::index_t offset) const
