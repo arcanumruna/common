@@ -3,6 +3,12 @@
 #include <cstring>
 #include <string>
 #include <array>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdexcept>
+#include <cstdint>
 
 #include "util/Index.h"
 #include "util/Exceptions.h"
@@ -201,6 +207,18 @@ public:
     {
         boundsCheck(offset, sizeof(std::int64_t));
         return *reinterpret_cast<std::int64_t *>(m_buffer + offset);
+    }
+
+    inline COND_MOCK_VIRTUAL std::int64_t getUInt64(aeron::util::index_t offset) const
+    {
+        boundsCheck(offset, sizeof(std::uint64_t));
+        return *reinterpret_cast<std::uint64_t *>(m_buffer + offset);
+    }
+
+    inline COND_MOCK_VIRTUAL void putUInt64(aeron::util::index_t offset, std::uint64_t v)
+    {
+        boundsCheck(offset, sizeof(std::uint64_t));
+        *reinterpret_cast<std::uint64_t *>(m_buffer + offset) = v;
     }
 
     inline COND_MOCK_VIRTUAL std::float_t getFloat(aeron::util::index_t offset) const
@@ -479,10 +497,27 @@ public:
         return getStringWithoutLength(offset + sizeof(std::int32_t), static_cast<std::size_t>(length));
     }
 
+    inline std::size_t getString(aeron::util::index_t offset, char* target) const
+    {
+        std::int32_t length;
+
+        boundsCheck(offset, sizeof(length));
+        ::memcpy(reinterpret_cast<char *>(&length), m_buffer + offset, sizeof(length));
+
+        return getStringWithoutLength(offset + sizeof(std::int32_t), static_cast<std::size_t>(length), target);
+    }
+
     inline std::string getStringWithoutLength(aeron::util::index_t offset, std::size_t length) const
     {
         boundsCheck(offset, length);
         return { m_buffer + static_cast<std::size_t>(offset), m_buffer + static_cast<std::size_t>(offset) + length };
+    }
+
+    inline std::size_t getStringWithoutLength(aeron::util::index_t offset, std::size_t length, char* target) const
+    {
+        boundsCheck(offset, length); // Ensure offset and length are within buffer bounds
+        std::memcpy(target, m_buffer + static_cast<std::size_t>(offset), length);
+        return length;
     }
 
     inline std::int32_t getStringLength(aeron::util::index_t offset) const
@@ -524,6 +559,27 @@ public:
         boundsCheck(offset, value.length());
         ::memcpy(m_buffer + offset, value.c_str(), value.length());
         return static_cast<std::int32_t>(value.length());
+    }
+
+    static AgronaAtomicBuffer mmap(std::size_t size, const char* backingFile) {
+        int fd = ::open(backingFile, O_RDWR | O_CREAT, 0666);
+        if (fd < 0) {
+            throw std::runtime_error(std::string("Failed to open file: ") + std::strerror(errno));
+        }
+
+        // Ensure file is correct size
+        if (::ftruncate(fd, size) < 0) {
+            ::close(fd);
+            throw std::runtime_error(std::string("Failed to ftruncate: ") + std::strerror(errno));
+        }
+
+        void* addr = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        ::close(fd);
+        if (addr == MAP_FAILED) {
+            throw std::runtime_error(std::string("Failed to mmap: ") + std::strerror(errno));
+        }
+
+        return AgronaAtomicBuffer(static_cast<std::uint8_t*>(addr), size);
     }
 
 #if !defined(DISABLE_BOUNDS_CHECKS)
