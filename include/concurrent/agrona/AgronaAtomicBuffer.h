@@ -209,7 +209,7 @@ public:
         return *reinterpret_cast<std::int64_t *>(m_buffer + offset);
     }
 
-    inline COND_MOCK_VIRTUAL std::int64_t getUInt64(aeron::util::index_t offset) const
+    inline COND_MOCK_VIRTUAL std::uint64_t getUInt64(aeron::util::index_t offset) const
     {
         boundsCheck(offset, sizeof(std::uint64_t));
         return *reinterpret_cast<std::uint64_t *>(m_buffer + offset);
@@ -219,6 +219,18 @@ public:
     {
         boundsCheck(offset, sizeof(std::uint64_t));
         *reinterpret_cast<std::uint64_t *>(m_buffer + offset) = v;
+    }
+
+    inline COND_MOCK_VIRTUAL std::uint32_t getUInt32(aeron::util::index_t offset) const
+    {
+        boundsCheck(offset, sizeof(std::uint32_t));
+        return *reinterpret_cast<std::uint32_t *>(m_buffer + offset);
+    }
+
+    inline COND_MOCK_VIRTUAL void putUInt32(aeron::util::index_t offset, std::uint32_t v)
+    {
+        boundsCheck(offset, sizeof(std::uint32_t));
+        *reinterpret_cast<std::uint32_t *>(m_buffer + offset) = v;
     }
 
     inline COND_MOCK_VIRTUAL std::float_t getFloat(aeron::util::index_t offset) const

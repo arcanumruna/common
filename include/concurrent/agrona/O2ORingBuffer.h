@@ -198,6 +198,32 @@ namespace agrona::concurrent::ringbuffer {
             return m_buffer.buffer();
         }
 
+        inline std::int32_t  size() {
+            AgronaAtomicBuffer &buffer = m_buffer;
+            const std::int32_t headPositionIndex = m_headPositionIndex;
+            const std::int32_t tailPositionIndex = m_tailPositionIndex;
+            long headBefore;
+            long tail;
+            long headAfter = buffer.getInt64Volatile(headPositionIndex);
+
+            do
+            {
+                headBefore = headAfter;
+                tail = buffer.getInt64Volatile(tailPositionIndex);
+                headAfter = buffer.getInt64Volatile(headPositionIndex);
+            }
+            while (headAfter != headBefore);
+
+            const std::int64_t size = tail - headAfter;
+            if (size < 0) {
+                return 0;
+            } else if (size > m_capacity) {
+                return m_capacity;
+            }
+
+            return static_cast<std::int32_t>(size);
+        }
+
     private:
         AgronaAtomicBuffer backingBuffer_;
         AgronaAtomicBuffer &m_buffer;

@@ -22,7 +22,7 @@ namespace agrona { namespace concurrent { namespace ringbuffer {
 
     using agrona_controlled_handler_t = std::function<ControlledAction(
         std::int32_t msgTypeId,
-        const AgronaAtomicBuffer &buffer,
+        AgronaAtomicBuffer &buffer,
         std::int32_t index,
         std::int32_t length
     )>;
