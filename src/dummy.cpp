@@ -5,6 +5,10 @@
 #include "concurrent/agrona/M2ORingBuffer.h"
 #include "concurrent/agrona/O2ORingBuffer.h"
 #include "concurrent/agrona/AgronaAtomicBuffer.h"
+#include "network/MessageBatchView.h"
+#include "network/RateLimiter.h"
+#include "network/FrameSyncBackoffIdleStrategy.h"
+#include "network/FrameSyncIdleStrategy.h"
 #include "numeric/NumberUtils.h"
 
 void __clion_index_stub() {}

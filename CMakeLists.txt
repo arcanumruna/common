@@ -14,6 +14,10 @@ add_library(common INTERFACE
         include/flow/ScopeExit.h
         include/text/StringBuilder.h
         include/numeric/NumberUtils.h
+        include/network/MessageBatchView.h
+        include/network/RateLimiter.h
+        include/network/FrameSyncBackoffIdleStrategy.h
+        include/network/FrameSyncIdleStrategy.h
 )
 
 target_include_directories(common INTERFACE
@@ -34,7 +38,11 @@ add_library(common_dummy STATIC
         include/concurrent/agrona/AgronaRingBufferDescriptor.h
         include/flow/ScopeExit.h
         include/text/StringBuilder.h
-        include/numeric/NumberUtils.h)
+        include/numeric/NumberUtils.h
+        include/network/MessageBatchView.h
+        include/network/RateLimiter.h
+        include/network/FrameSyncBackoffIdleStrategy.h
+        include/network/FrameSyncIdleStrategy.h)
 
 target_include_directories(common_dummy PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -55,3 +63,47 @@ install(EXPORT commonTargets
         DESTINATION lib/cmake/common)
 
 install(DIRECTORY include/ DESTINATION include)
+
+
+
+#### Testing
+option(BUILD_TESTING "Build tests" OFF)
+
+if(BUILD_TESTING)
+    enable_testing()
+
+    find_package(GTest REQUIRED)
+
+    add_executable(common_tests
+            tests/network/RateLimiterTest.cpp
+            tests/network/FrameSyncIdleStrategyTest.cpp
+            tests/network/MessageBatchViewTest.cpp
+
+            include/concurrent/agrona/M2OConcurrentArrayQueue.h
+            include/concurrent/agrona/M2ORingBuffer.h
+            include/concurrent/agrona/O2ORingBuffer.h
+            include/concurrent/agrona/AgronaAtomicBuffer.h
+            include/concurrent/agrona/AgronaRingBufferDescriptor.h
+            include/flow/ScopeExit.h
+            include/text/StringBuilder.h
+            include/numeric/NumberUtils.h
+            include/network/MessageBatchView.h
+            include/network/RateLimiter.h
+            include/network/FrameSyncBackoffIdleStrategy.h
+            include/network/FrameSyncIdleStrategy.h
+    )
+
+    target_include_directories(common_tests PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+
+    target_link_libraries(common_tests PUBLIC
+            GTest::gtest_main
+            aeron::aeron
+    )
+
+    include(GoogleTest)
+    gtest_discover_tests(common_tests)
+endif()
+############################################

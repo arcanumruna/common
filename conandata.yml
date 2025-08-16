@@ -3,3 +3,4 @@
 
 requirements:
   - "aeron/1.41.4"
+  - "gtest/1.16.0"
