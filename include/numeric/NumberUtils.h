@@ -1,3 +1,10 @@
+#pragma once
+
+#include <charconv>
+#include <string_view>
+#include <stdexcept>
+
+
 inline int fast_atoi(const char* s) {
     int val = 0;
     while (*s >= '0' && *s <= '9') val = val * 10 + (*s++ - '0');
@@ -10,7 +17,7 @@ inline int16_t fast_atoi16(const char* s) { return static_cast<int16_t>(fast_ato
 inline std::string_view floatToStringView(float value, char* buffer, size_t bufferSize) {
     auto [ptr, ec] = std::to_chars(buffer, buffer + bufferSize, value, std::chars_format::general);
     if (ec != std::errc()) {
-        throw std::runtime_error("floatToStringView: to_chars conversion failed");
+        throw std::runtime_error("floatToStringView: conversion failed");
     }
     return std::string_view(buffer, ptr - buffer);
 }
@@ -20,9 +27,28 @@ inline std::string floatToString(float f) {
     auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), f, std::chars_format::general);
 
     if (ec != std::errc()) {
-        throw std::runtime_error("floatToString: to_chars conversion failed");
+        throw std::runtime_error("floatToString: conversion failed");
     }
 
     // Create std::string on the heap with exact size
     return std::string(buffer, ptr);
+}
+
+inline uint64_t stringViewToUINT64(std::string_view sv) {
+    uint64_t value;
+    auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), value);
+
+    if (ec == std::errc::invalid_argument) {
+        throw std::runtime_error("Invalid input: not a valid number");
+    } else if (ec == std::errc::result_out_of_range) {
+        throw std::runtime_error("Number out of range for uint64_t");
+    } else if (ec != std::errc()) {
+        throw std::runtime_error("Unknown parsing error");
+    }
+
+    if (ptr != sv.data() + sv.size()) {
+        throw std::runtime_error("Invalid input: trailing characters");
+    }
+
+    return value;
 }
