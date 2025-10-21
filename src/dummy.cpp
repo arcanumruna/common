@@ -11,6 +11,7 @@
 #include "network/FrameSyncIdleStrategy.h"
 #include "network/SnapshotStore.h"
 #include "network/FastRNG.h"
+#include "network/IdGenerator.h"
 #include "numeric/NumberUtils.h"
 
 void __clion_index_stub() {}
