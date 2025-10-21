@@ -20,6 +20,8 @@ add_library(common INTERFACE
         include/network/FrameSyncIdleStrategy.h
         include/configuration/Configuration.h
         include/network/Network.h
+        include/network/SnapshotStore.h
+        include/network/FastRNG.h
 )
 
 target_include_directories(common INTERFACE
@@ -46,7 +48,9 @@ add_library(common_dummy STATIC
         include/network/FrameSyncBackoffIdleStrategy.h
         include/network/FrameSyncIdleStrategy.h
         include/configuration/Configuration.h
-        include/network/Network.h)
+        include/network/Network.h
+        include/network/SnapshotStore.h
+        include/network/FastRNG.h)
 
 target_include_directories(common_dummy PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -97,6 +101,8 @@ if(BUILD_TESTING)
             include/network/FrameSyncIdleStrategy.h
             include/configuration/Configuration.h
             include/network/Network.h
+            include/network/SnapshotStore.h
+            include/network/FastRNG.h
     )
 
     target_include_directories(common_tests PRIVATE

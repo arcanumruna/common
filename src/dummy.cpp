@@ -9,6 +9,8 @@
 #include "network/RateLimiter.h"
 #include "network/FrameSyncBackoffIdleStrategy.h"
 #include "network/FrameSyncIdleStrategy.h"
+#include "network/SnapshotStore.h"
+#include "network/FastRNG.h"
 #include "numeric/NumberUtils.h"
 
 void __clion_index_stub() {}
