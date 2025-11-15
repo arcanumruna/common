@@ -23,6 +23,7 @@ add_library(common INTERFACE
         include/network/SnapshotStore.h
         include/network/FastRNG.h
         include/network/IdGenerator.h
+        include/time/Time.h
 )
 
 target_include_directories(common INTERFACE
@@ -52,7 +53,8 @@ add_library(common_dummy STATIC
         include/network/Network.h
         include/network/SnapshotStore.h
         include/network/FastRNG.h
-        include/network/IdGenerator.h)
+        include/network/IdGenerator.h
+        include/time/Time.h)
 
 target_include_directories(common_dummy PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -106,6 +108,7 @@ if(BUILD_TESTING)
             include/network/SnapshotStore.h
             include/network/FastRNG.h
             include/network/IdGenerator.h
+            include/time/Time.h
     )
 
     target_include_directories(common_tests PRIVATE

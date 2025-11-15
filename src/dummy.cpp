@@ -13,5 +13,6 @@
 #include "network/FastRNG.h"
 #include "network/IdGenerator.h"
 #include "numeric/NumberUtils.h"
+#include "time/Time.h"
 
 void __clion_index_stub() {}
