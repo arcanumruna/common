@@ -6,3 +6,10 @@ inline uint32_t getCurrentTimeSeconds() {
     auto secs = duration_cast<seconds>(now.time_since_epoch()).count();
     return static_cast<uint32_t>(secs);
 }
+
+
+inline uint64_t getCurrentTimeMillis() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()
+    ).count();
+}
