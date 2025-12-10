@@ -1,9 +1,8 @@
 #pragma once
 
 struct FastRNG {
-    uint32_t state;
-
-    FastRNG(uint32_t seed) : state(seed ? seed : 0xdeadbeef) {}
+    uint32_t state = 0;
+    uint32_t seed = 0xdeadbeef;
 
     uint32_t next() {
         state ^= state >> 12;
