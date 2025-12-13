@@ -52,3 +52,26 @@ inline uint64_t stringViewToUINT64(std::string_view sv) {
 
     return value;
 }
+
+#if defined(__SSE__) || defined(_M_X64) || defined(_M_IX86_FP)
+#include <xmmintrin.h>
+inline float fast_inv_sqrt(float x) {
+    return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x)));
+}
+#else
+inline float fast_inv_sqrt(float x) {
+    float xhalf = 0.5f * x;
+    int32_t i;
+    std::memcpy(&i, &x, sizeof(float));
+    i = 0x5f375a86 - (i >> 1);
+    std::memcpy(&x, &i, sizeof(float));
+    x = x * (1.5f - xhalf * x * x);
+    return x;
+}
+#endif
+
+inline bool is_valid_float(float x) {
+    int32_t bits;
+    std::memcpy(&bits, &x, sizeof(float));
+    return ((bits & 0x7F800000) != 0x7F800000);
+}
