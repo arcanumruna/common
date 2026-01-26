@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+VERSION=$(cat VERSION.txt | tr -d '[:space:]')
+PACKAGE="common/${VERSION}@vradu/dev"
+
+echo "📦 Package: $PACKAGE"
+
 echo "🔧 Installing Conan dependencies..."
 conan install . --build=missing -s build_type=Release
 
@@ -18,5 +23,8 @@ conan create . --user=vradu --channel=dev
 
 echo "📤 Exporting package to local cache..."
 conan export . --user=vradu --channel=dev
+
+echo "📤 Uploading to remote..."
+conan upload "$PACKAGE" --remote=artifactory -c
 
 echo "✅ Done."
