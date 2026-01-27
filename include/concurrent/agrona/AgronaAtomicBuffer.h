@@ -15,7 +15,7 @@
 #include "util/StringUtil.h"
 #include "util/MacroUtil.h"
 #include "concurrent/Atomic64.h"
-#include "aeron.h"
+#include <Aeron.h>
 
 namespace agrona { namespace concurrent {
 

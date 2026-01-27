@@ -4,7 +4,7 @@
 #include <functional>
 
 #include "AgronaAtomicBuffer.h"
-#include "aeron.h"
+#include "Aeron.h"
 #include "util/Index.h"
 #include "util/BitUtil.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include "aeron.h"
+#include "Aeron.h"
 #include "concurrent/agrona/AgronaAtomicBuffer.h"
 #include "concurrent/agrona/AgronaRingBufferDescriptor.h"
 #include "concurrent/ringbuffer/RecordDescriptor.h"
