@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <stdexcept>
 #include <cstdint>
+#include <cmath>
 
 #include "util/Index.h"
 #include "util/Exceptions.h"
