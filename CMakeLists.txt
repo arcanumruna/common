@@ -92,6 +92,19 @@ if(BUILD_TESTING)
             tests/network/RateLimiterTest.cpp
             tests/network/FrameSyncIdleStrategyTest.cpp
             tests/network/MessageBatchViewTest.cpp
+            tests/network/RunningAvgTest.cpp
+            tests/network/FrameSyncBackoffIdleStrategyTest.cpp
+            tests/network/SnapshotStoreTest.cpp
+            tests/network/IdGeneratorTest.cpp
+            tests/network/FastRNGTest.cpp
+            tests/network/NetworkTest.cpp
+            tests/collection/ChunkedListTest.cpp
+            tests/configuration/ConfigurationTest.cpp
+            tests/file/FilesTest.cpp
+            tests/flow/ScopeExitTest.cpp
+            tests/numeric/NumberUtilsTest.cpp
+            tests/text/StringBuilderTest.cpp
+            tests/time/TimeTest.cpp
 
             include/concurrent/agrona/M2OConcurrentArrayQueue.h
             include/concurrent/agrona/M2ORingBuffer.h

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <string_view>
 
 struct StringBuilder {
@@ -35,10 +36,12 @@ struct StringBuilder {
 
     void append(uint64_t value) {
         if (len >= capacity) return;
+        // Write into a temporary buffer first to avoid writing past the end of buf.
+        char tmp[20]; // uint64_t is at most 20 decimal digits
+        int n = uint64_to_chars_unsafe(value, tmp);
         int avail = static_cast<int>(capacity - len);
-        char* dest = buf + len;
-        int n = uint64_to_chars_unsafe(value, dest);
         if (n > avail) n = avail;
+        memcpy(buf + len, tmp, n);
         len += n;
     }
 
@@ -90,7 +93,8 @@ struct StringBuilder {
         if (n < 10000000000000000ULL) return 16;
         if (n < 100000000000000000ULL) return 17;
         if (n < 1000000000000000000ULL) return 18;
-        return 19;
+        if (n < 10000000000000000000ULL) return 19;
+        return 20;
     }
 
     const char* c_str() const {

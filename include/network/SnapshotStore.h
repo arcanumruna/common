@@ -21,8 +21,9 @@ public:
     }
 
     bool floor(int64_t ts, const T*& out) const {
-        for (int i = static_cast<int>(size) - 1; i >= 0; --i) {
-            Entry& e = entries[(writeIndex - 1 - i + Capacity) & (Capacity - 1)];
+        // Search newest-to-oldest: return the greatest timestamp that is <= ts.
+        for (int i = 0; i < static_cast<int>(size); ++i) {
+            const Entry& e = entries[(writeIndex - 1 - i + Capacity) & (Capacity - 1)];
             if (e.timestamp <= ts) {
                 out = &e.value;
                 return true;
@@ -33,7 +34,7 @@ public:
 
     bool ceil(int64_t ts, const T*& out) const {
         for (size_t i = 0; i < size; ++i) {
-            Entry& e = entries[(writeIndex - size + i + Capacity) & (Capacity - 1)];
+            const Entry& e = entries[(writeIndex - size + i + Capacity) & (Capacity - 1)];
             if (e.timestamp >= ts) {
                 out = &e.value;
                 return true;

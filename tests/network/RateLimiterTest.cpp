@@ -68,3 +68,23 @@ TEST(RateLimiterTest, DetectsInactivityCorrectly) {
     sleepMs(65000);
     EXPECT_TRUE(limiter.isInactive());
 }
+
+TEST(RateLimiterTest, WhitelistUpdatesActivityTime) {
+    // Whitelisted messages should update the activity timer (BUG-12 fix).
+    // We can't easily sleep 60s, so we verify the inverse: immediately after
+    // sending whitelisted messages the limiter is NOT inactive.
+    RateLimiter limiter(1, milliseconds(1000), { 99 });
+    limiter.allow(99); // whitelisted
+    limiter.allow(99);
+    EXPECT_FALSE(limiter.isInactive());
+}
+
+TEST(RateLimiterTest, ViolationCountContinuesBeyond3) {
+    RateLimiter limiter(1, milliseconds(5000));
+    limiter.allow(0);  // token consumed
+    limiter.allow(0);  // -1
+    limiter.allow(0);  // -2
+    limiter.allow(0);  // -3
+    EXPECT_EQ(limiter.allow(0), -3); // 4th violation still returns -3
+    EXPECT_EQ(limiter.allow(0), -3); // 5th violation still returns -3
+}

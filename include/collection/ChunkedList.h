@@ -112,7 +112,7 @@ public:
         size_t remaining;
 
         void skipEmptyChunks() {
-            while (chunk && chunk->count == 0 && chunk->next) {
+            while (chunk && chunk->count == 0) {
                 chunk = chunk->next.get();
             }
         }

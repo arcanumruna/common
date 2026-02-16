@@ -1,8 +1,9 @@
 #pragma once
 
 #include <charconv>
-#include <string_view>
+#include <cstring>
 #include <stdexcept>
+#include <string_view>
 
 
 inline int fast_atoi(const char* s) {
@@ -31,6 +32,17 @@ inline std::string floatToString(float f) {
     }
 
     // Create std::string on the heap with exact size
+    return std::string(buffer, ptr);
+}
+
+inline std::string uint32ToString(uint32_t value) {
+    char buffer[10]; // max digits for uint32_t is 10 (4294967295)
+    auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), value);
+
+    if (ec != std::errc()) {
+        throw std::runtime_error("uint32ToString: conversion failed");
+    }
+
     return std::string(buffer, ptr);
 }
 

@@ -63,3 +63,29 @@ TEST(FrameSyncIdleStrategyTest, MaintainsFrameRateAccuracy) {
     // Allow a tolerance of ±5% of frameInterval
     EXPECT_LT(errorNs.count(), frameInterval.count() * 0.05);
 }
+
+TEST(FrameSyncIdleStrategyTest, IdleWithWorkCountDelegatesToIdle) {
+    // idle(workCount) is documented as equivalent to idle() for FrameSyncIdleStrategy.
+    // Verify it completes a small number of frames at the expected rate.
+    constexpr int fps = 20;
+    aeron::concurrent::FrameSyncIdleStrategy strategy(fps);
+
+    auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 3; ++i) {
+        strategy.idle(0);  // workCount ignored
+        strategy.idle(5);
+    }
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - start).count();
+
+    // 6 frames at 20 fps = 300 ms; allow generous tolerance
+    EXPECT_GE(elapsed, 200);
+    EXPECT_LT(elapsed, 600);
+}
+
+TEST(FrameSyncIdleStrategyTest, ResetIsNoOp) {
+    aeron::concurrent::FrameSyncIdleStrategy strategy(60);
+    strategy.reset(); // must not crash or alter pacing
+    strategy.idle();  // must still work normally after reset
+    strategy.reset();
+}

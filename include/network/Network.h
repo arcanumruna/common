@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include <unistd.h>
-#include <vector>
 
 inline std::string getHostname() {
     char buf[256];

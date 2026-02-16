@@ -91,3 +91,29 @@ TEST(MessageBatchViewTest, ThreeMessages) {
     EXPECT_EQ(messages[2].typeId, 9);
     EXPECT_EQ(std::string(messages[2].payload, messages[2].payloadSize), "z");
 }
+
+TEST(MessageBatchViewTest, MalformedZeroLengthStopsIteration) {
+    // A message with length == 0 is invalid; the iterator must stop immediately.
+    std::vector<char> buffer;
+    buffer.push_back(0); // length == 0
+
+    MessageBatchView view(std::string_view(buffer.data(), buffer.size()));
+
+    int count = 0;
+    for (const auto& msg : view) { (void)msg; ++count; }
+    EXPECT_EQ(count, 0);
+}
+
+TEST(MessageBatchViewTest, TruncatedPayloadStopsIteration) {
+    // Header says payload is 10 bytes, but only 3 bytes are actually present.
+    std::vector<char> buffer;
+    buffer.push_back(static_cast<char>(11)); // length = 1 (typeId) + 10 (payload)
+    buffer.push_back(static_cast<char>(5));  // typeId
+    buffer.push_back('a'); buffer.push_back('b'); buffer.push_back('c'); // only 3 bytes
+
+    MessageBatchView view(std::string_view(buffer.data(), buffer.size()));
+
+    int count = 0;
+    for (const auto& msg : view) { (void)msg; ++count; }
+    EXPECT_EQ(count, 0); // truncated — iterator must stop before yielding the message
+}

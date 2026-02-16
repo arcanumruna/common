@@ -1,8 +1,10 @@
 #pragma once
 
+#include <chrono>
+#include <cstdint>
+
 struct FastRNG {
     uint32_t state = 0;
-    uint32_t seed = 0xdeadbeef;
 
     uint32_t next() {
         state ^= state >> 12;
@@ -13,7 +15,7 @@ struct FastRNG {
             state = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(now).count());
             if (state == 0) state = 1;
         }
-        return state * 0x2545F4914F6CDD1D;
+        return state * 0x2545F4914F6CDD1Dull;
     }
 
     uint32_t next(uint32_t min, uint32_t max) {

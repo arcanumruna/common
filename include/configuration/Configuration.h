@@ -1,6 +1,7 @@
 #pragma once
 #include <charconv>
 #include <cstdlib>
+#include <stdexcept>
 #include <string>
 
 inline std::string getEnv(const char* key, const char* def = nullptr) {

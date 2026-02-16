@@ -1,10 +1,12 @@
 #pragma once
 
+#include <algorithm>
+#include <array>
+#include <atomic>
 #include <chrono>
 #include <thread>
-#include <array>
-#include <algorithm>
-#include <atomic>
+
+#include "detail/RunningAvg.h"
 
 namespace aeron { namespace concurrent {
 
@@ -93,50 +95,6 @@ public:
 private:
     using Clock = std::chrono::steady_clock;
 
-    class RunningAvg
-    {
-    public:
-        static constexpr size_t SLOT_COUNT = 10;
-        static constexpr auto DAMPEN_THRESHOLD = std::chrono::milliseconds(10);
-        static constexpr float DAMPEN_FACTOR = 0.9f;
-
-        RunningAvg()
-        {
-            values_.fill(std::chrono::microseconds(1000)); // 1ms default
-        }
-
-        void add(std::chrono::nanoseconds duration)
-        {
-            values_[index_++ % SLOT_COUNT] = duration;
-            index_ %= SLOT_COUNT;
-        }
-
-        std::chrono::nanoseconds avg() const
-        {
-            std::chrono::nanoseconds sum(0);
-            for (const auto& v : values_)
-            {
-                sum += v;
-            }
-            return sum / SLOT_COUNT;
-        }
-
-        void dampenForLowResTicker()
-        {
-            if (avg() > DAMPEN_THRESHOLD)
-            {
-                for (auto& v : values_)
-                {
-                    v = std::chrono::nanoseconds(static_cast<long long>(v.count() * DAMPEN_FACTOR));
-                }
-            }
-        }
-
-    private:
-        std::array<std::chrono::nanoseconds, SLOT_COUNT> values_;
-        size_t index_{0};
-    };
-
     void initializeIfNeeded()
     {
         if (!m_initialized)
@@ -145,9 +103,13 @@ private:
             m_initialized = true;
 
 #if defined(_WIN32)
-            static std::thread([] {
+            // Spawn a long-sleeping thread so the OS keeps its timer resolution
+            // elevated for the lifetime of the process.
+            static std::thread s_timerResolutionThread([] {
                 std::this_thread::sleep_for(std::chrono::hours(24 * 365 * 10));
-            }).detach();
+            });
+            static bool s_detached = (s_timerResolutionThread.detach(), true);
+            (void)s_detached;
 #endif
         }
     }
@@ -164,8 +126,8 @@ private:
     Clock::time_point m_nextFrame;
     bool m_initialized;
 
-    RunningAvg m_sleepDurations;
-    RunningAvg m_yieldDurations;
+    detail::RunningAvg m_sleepDurations;
+    detail::RunningAvg m_yieldDurations;
 };
 
 }} // namespace aeron::concurrent

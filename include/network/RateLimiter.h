@@ -33,8 +33,11 @@ public:
     // -2 = additional violations in window
     // -3 = final violation (kick)
     int allow(std::uint8_t messageType) {
-        // Allow whitelisted messages without touching tokens/violations/activity time.
+        // Allow whitelisted messages without consuming tokens or tracking violations.
+        // Activity time is still updated so that heartbeat/keepalive messages prevent
+        // the client from being evicted by isInactive().
         if (whitelist.find(messageType) != whitelist.end()) {
+            lastActivityTime = now();
             return 0;
         }
 
