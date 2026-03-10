@@ -4,11 +4,14 @@
 #include <cstring>
 
 // Helper to build a batch message buffer
+// Wire format: [uint16_t LE length][uint8_t typeId][payload...]
 std::vector<char> buildMessage(uint8_t typeId, const std::string& payload) {
     std::vector<char> msg;
-    msg.push_back(static_cast<char>(payload.size() + 1)); // total length
-    msg.push_back(static_cast<char>(typeId));             // type ID
-    msg.insert(msg.end(), payload.begin(), payload.end()); // payload
+    uint16_t length = static_cast<uint16_t>(payload.size() + 1); // typeId + payload
+    msg.push_back(static_cast<char>(length & 0xFF));         // length low byte
+    msg.push_back(static_cast<char>((length >> 8) & 0xFF));  // length high byte
+    msg.push_back(static_cast<char>(typeId));                 // type ID
+    msg.insert(msg.end(), payload.begin(), payload.end());    // payload
     return msg;
 }
 
@@ -94,8 +97,11 @@ TEST(MessageBatchViewTest, ThreeMessages) {
 
 TEST(MessageBatchViewTest, MalformedZeroLengthStopsIteration) {
     // A message with length == 0 is invalid; the iterator must stop immediately.
+    // Need at least 3 bytes for the new format (2 length + 1 typeId)
     std::vector<char> buffer;
-    buffer.push_back(0); // length == 0
+    buffer.push_back(0); // length low byte = 0
+    buffer.push_back(0); // length high byte = 0
+    buffer.push_back(5); // typeId (won't be read since length=0)
 
     MessageBatchView view(std::string_view(buffer.data(), buffer.size()));
 
@@ -107,7 +113,9 @@ TEST(MessageBatchViewTest, MalformedZeroLengthStopsIteration) {
 TEST(MessageBatchViewTest, TruncatedPayloadStopsIteration) {
     // Header says payload is 10 bytes, but only 3 bytes are actually present.
     std::vector<char> buffer;
-    buffer.push_back(static_cast<char>(11)); // length = 1 (typeId) + 10 (payload)
+    uint16_t length = 11; // 1 (typeId) + 10 (payload)
+    buffer.push_back(static_cast<char>(length & 0xFF));        // length low byte
+    buffer.push_back(static_cast<char>((length >> 8) & 0xFF)); // length high byte
     buffer.push_back(static_cast<char>(5));  // typeId
     buffer.push_back('a'); buffer.push_back('b'); buffer.push_back('c'); // only 3 bytes
 

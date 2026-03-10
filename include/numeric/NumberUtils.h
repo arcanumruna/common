@@ -8,7 +8,11 @@
 
 inline int fast_atoi(const char* s) {
     int val = 0;
-    while (*s >= '0' && *s <= '9') val = val * 10 + (*s++ - '0');
+    while (*s >= '0' && *s <= '9') {
+        if (val > INT32_MAX / 10) return INT32_MAX;
+        val = val * 10 + (*s++ - '0');
+        if (val < 0) return INT32_MAX; // overflow wrapped negative
+    }
     return val;
 }
 

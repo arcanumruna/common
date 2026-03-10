@@ -73,7 +73,9 @@ namespace agrona::concurrent::ringbuffer {
             buffer.putInt32Ordered(aeron::ringbuffer::RecordDescriptor::lengthOffset(recordIndex), -recordLength);
         }
 
-        [[nodiscard]] inline int read(const agrona_handler_t& handler, int messageCountLimit) const {
+        // BUG-M23 fix: Template for inlining + zero memory on read (match M2ORingBuffer)
+        template<typename Handler>
+        [[nodiscard]] inline int read(Handler&& handler, int messageCountLimit) const {
             int messagesRead = 0;
 
             AgronaAtomicBuffer& buffer = m_buffer;
@@ -88,6 +90,8 @@ namespace agrona::concurrent::ringbuffer {
 
             auto onExit = make_scope_exit([&]() {
                 if (bytesRead > 0) {
+                    // BUG-M23: Zero consumed region to prevent stale data reads
+                    buffer.setMemory(headIndex, static_cast<std::size_t>(bytesRead), 0);
                     buffer.putInt64Ordered(headPositionIndex, head + bytesRead);
                 }
             });
@@ -123,7 +127,8 @@ namespace agrona::concurrent::ringbuffer {
             return messagesRead;
         }
 
-        [[nodiscard]] inline int controlledRead(const agrona_controlled_handler_t &handler,
+        template<typename Handler>
+        [[nodiscard]] inline int controlledRead(Handler&& handler,
                                                 int messageCountLimit) const {
             int messagesRead = 0;
             AgronaAtomicBuffer &buffer = m_buffer;

@@ -118,3 +118,14 @@ TEST(StringBuilderTest, SizeReflectsLength) {
     sb.append(std::string_view("YZ"));
     EXPECT_EQ(sb.size(), 3u);
 }
+
+// BUG-L17 regression: c_str() must be non-const (it writes a null terminator)
+TEST(StringBuilderTest, L17_CStrIsNonConst) {
+    char buf[16] = {};
+    StringBuilder sb(buf, sizeof(buf));
+    sb.append(std::string_view("test"));
+    // This must compile — c_str() is non-const and mutates the buffer
+    const char* cs = sb.c_str();
+    EXPECT_STREQ(cs, "test");
+    EXPECT_EQ(buf[4], '\0'); // null terminator was written
+}

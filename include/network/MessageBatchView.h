@@ -8,6 +8,9 @@ struct BatchedMessage {
     size_t payloadSize;
 };
 
+// BUG-M29 fix: Changed per-message length from uint8_t to uint16_t to support messages > 254 bytes.
+// Wire format: [uint16_t length][uint8_t typeId][payload...]
+// length = typeId byte + payload size (does NOT include the 2-byte length prefix itself)
 class MessageBatchView {
 public:
     class Iterator {
@@ -41,22 +44,27 @@ public:
         BatchedMessage current{};
 
         void advance() {
-            if (!ptr || ptr >= end || (end - ptr) < 2) {
+            // Need at least 3 bytes: 2 for length + 1 for typeId
+            if (!ptr || ptr >= end || (end - ptr) < 3) {
                 ptr = nullptr;  // use nullptr as end sentinel
                 return;
             }
 
-            uint8_t length = static_cast<uint8_t>(ptr[0]);
-            if (length < 1 || (end - ptr) < (1 + length)) {
+            // Read uint16_t length (little-endian)
+            uint16_t length = static_cast<uint16_t>(
+                static_cast<uint8_t>(ptr[0]) |
+                (static_cast<uint8_t>(ptr[1]) << 8));
+
+            if (length < 1 || (end - ptr) < (2 + length)) {
                 ptr = nullptr;
                 return;
             }
 
-            current.typeId = static_cast<uint8_t>(ptr[1]);
-            current.payload = ptr + 2;
+            current.typeId = static_cast<uint8_t>(ptr[2]);
+            current.payload = ptr + 3;
             current.payloadSize = length - 1;
 
-            ptr += 1 + length;
+            ptr += 2 + length;
         }
     };
 

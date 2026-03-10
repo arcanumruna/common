@@ -97,7 +97,7 @@ struct StringBuilder {
         return 20;
     }
 
-    const char* c_str() const {
+    const char* c_str() {
         if (len < capacity) buf[len] = '\0';
         else buf[capacity-1] = '\0';
         return buf;

@@ -121,3 +121,19 @@ TEST(NumberUtilsTest, IsValidFloatInf) {
     EXPECT_FALSE(is_valid_float(std::numeric_limits<float>::infinity()));
     EXPECT_FALSE(is_valid_float(-std::numeric_limits<float>::infinity()));
 }
+
+// BUG-L18 regression: fast_atoi must not overflow on huge numeric strings
+TEST(NumberUtilsTest, L18_FastAtoiOverflowReturnsMax) {
+    // "9999999999" is larger than INT32_MAX (2147483647)
+    EXPECT_EQ(fast_atoi("9999999999"), INT32_MAX);
+}
+
+TEST(NumberUtilsTest, L18_FastAtoiMaxInt32IsOk) {
+    // INT32_MAX = 2147483647 should parse correctly
+    EXPECT_EQ(fast_atoi("2147483647"), 2147483647);
+}
+
+TEST(NumberUtilsTest, L18_FastAtoiJustOverMaxInt32) {
+    // 2147483648 is INT32_MAX+1, should clamp
+    EXPECT_EQ(fast_atoi("2147483648"), INT32_MAX);
+}

@@ -79,7 +79,9 @@ namespace agrona::concurrent::ringbuffer {
                                      -recordLength);
         }
 
-        int read(const agrona_handler_t& handler, int messageCountLimit) {
+        // PERF-P25: Templated version for inlining (avoids std::function overhead)
+        template<typename Handler>
+        int read(Handler&& handler, int messageCountLimit) {
             int messagesRead = 0;
 
             AgronaAtomicBuffer& buffer = m_buffer;
@@ -129,7 +131,9 @@ namespace agrona::concurrent::ringbuffer {
             return messagesRead;
         }
 
-        int controlledRead(const agrona_controlled_handler_t &handler, int messageCountLimit = INT_MAX) {
+        // PERF-P25: Templated version for inlining (avoids std::function overhead)
+        template<typename Handler>
+        int controlledRead(Handler&& handler, int messageCountLimit = INT_MAX) {
             int messagesRead = 0;
 
             AgronaAtomicBuffer &buffer = m_buffer;
@@ -198,7 +202,8 @@ namespace agrona::concurrent::ringbuffer {
         }
 
 
-        inline int read(const agrona_handler_t &handler) {
+        template<typename Handler>
+        inline int read(Handler&& handler) {
             return read(handler, INT_MAX);
         }
 

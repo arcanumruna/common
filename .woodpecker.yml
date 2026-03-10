@@ -1,0 +1,7 @@
+steps:
+  build:
+    image: local
+    commands:
+      - ./build.sh
+    labels:
+      role: cpp-builder
