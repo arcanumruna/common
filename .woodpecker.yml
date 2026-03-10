@@ -1,6 +1,6 @@
 steps:
   build:
-    image: local
+    image: bash
     commands:
       - ./build.sh
     labels:
