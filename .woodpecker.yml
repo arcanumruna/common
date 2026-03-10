@@ -2,6 +2,6 @@ steps:
   build:
     image: bash
     commands:
-      - ./build.sh
+      - ./build.sh 2>&1 | tee /tmp/woodpecker-build.log
     labels:
       role: cpp-builder
