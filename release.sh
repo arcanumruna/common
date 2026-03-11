@@ -1,11 +1,11 @@
-#\!/usr/bin/env bash
+#!/usr/bin/env bash
 # Usage: ./release.sh [major|minor|patch]
 set -euo pipefail
 
 RELEASE_TYPE="${1:?Usage: ./release.sh [major|minor|patch]}"
 VERSION=$(< VERSION.txt)
 
-if [[ \! $VERSION =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-snapshot$ ]]; then
+if [[ ! $VERSION =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-snapshot$ ]]; then
   echo "❌ VERSION.txt must be X.Y.Z-snapshot, got: $VERSION"
   exit 1
 fi
