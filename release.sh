@@ -30,8 +30,19 @@ echo "$RELEASE_VERSION" > VERSION.txt
 git add VERSION.txt
 git commit -m "release: $RELEASE_VERSION"
 
-# 2. Tag
-git tag -a "v$RELEASE_VERSION" -m "Release $RELEASE_VERSION"
+# 2. Tag with release notes
+PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+if [[ -n "$PREV_TAG" ]]; then
+  NOTES=$(git log "$PREV_TAG"..HEAD~1 --pretty=format:"- %s" --no-merges)
+else
+  NOTES=$(git log HEAD~1 --pretty=format:"- %s" --no-merges)
+fi
+
+TAG_MSG="Release $RELEASE_VERSION
+
+$NOTES"
+
+git tag -a "v$RELEASE_VERSION" -m "$TAG_MSG"
 
 # 3. Set next SNAPSHOT
 echo "$NEXT" > VERSION.txt
