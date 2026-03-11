@@ -1,0 +1,10 @@
+when:
+  event: tag
+
+steps:
+  build:
+    image: bash
+    commands:
+      - set -o pipefail && ./build.sh 2>&1 | tee /tmp/woodpecker-build.log
+    labels:
+      role: cpp-builder

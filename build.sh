@@ -1,4 +1,5 @@
 #!/bin/bash
+# CI build script
 set -e
 
 VERSION=$(cat VERSION.txt | tr -d '[:space:]')
