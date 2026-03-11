@@ -5,8 +5,8 @@ set -euo pipefail
 RELEASE_TYPE="${1:?Usage: ./release.sh [major|minor|patch]}"
 VERSION=$(< VERSION.txt)
 
-if [[ \! $VERSION =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-SNAPSHOT$ ]]; then
-  echo "❌ VERSION.txt must be X.Y.Z-SNAPSHOT, got: $VERSION"
+if [[ \! $VERSION =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-snapshot$ ]]; then
+  echo "❌ VERSION.txt must be X.Y.Z-snapshot, got: $VERSION"
   exit 1
 fi
 
@@ -16,9 +16,9 @@ PATCH="${BASH_REMATCH[3]}"
 RELEASE_VERSION="$MAJOR.$MINOR.$PATCH"
 
 case "$RELEASE_TYPE" in
-  major) NEXT="$((MAJOR + 1)).0.0-SNAPSHOT" ;;
-  minor) NEXT="$MAJOR.$((MINOR + 1)).0-SNAPSHOT" ;;
-  patch) NEXT="$MAJOR.$MINOR.$((PATCH + 1))-SNAPSHOT" ;;
+  major) NEXT="$((MAJOR + 1)).0.0-snapshot" ;;
+  minor) NEXT="$MAJOR.$((MINOR + 1)).0-snapshot" ;;
+  patch) NEXT="$MAJOR.$MINOR.$((PATCH + 1))-snapshot" ;;
   *) echo "❌ Invalid release type: $RELEASE_TYPE (use major|minor|patch)"; exit 1 ;;
 esac
 
