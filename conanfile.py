@@ -8,7 +8,7 @@ class ConanApplication(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False]}
     default_options = {"shared": False}
-    exports_sources = "src/*", "include/*", "CMakeLists.txt", "VERSION.txt"
+    exports_sources = "src/*", "include/*", "data/*", "CMakeLists.txt", "VERSION.txt"
 
     def set_version(self):
         version_file = os.path.join(os.path.dirname(__file__), "VERSION.txt")
@@ -39,3 +39,4 @@ class ConanApplication(ConanFile):
     def package_info(self):
         self.cpp_info.set_property("cmake_target_name", "common")
         self.cpp_info.includedirs = ["include"]
+        self.cpp_info.resdirs = ["data"]

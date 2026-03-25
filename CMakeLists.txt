@@ -25,6 +25,7 @@ add_library(common INTERFACE
         include/network/IdGenerator.h
         include/time/Time.h
         include/file/Files.h
+        include/filter/ProfanityFilter.h
 )
 
 target_include_directories(common INTERFACE
@@ -56,7 +57,8 @@ add_library(common_dummy STATIC
         include/network/FastRNG.h
         include/network/IdGenerator.h
         include/time/Time.h
-        include/file/Files.h)
+        include/file/Files.h
+        include/filter/ProfanityFilter.h)
 
 target_include_directories(common_dummy PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -77,6 +79,7 @@ install(EXPORT commonTargets
         DESTINATION lib/cmake/common)
 
 install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY data/ DESTINATION data)
 
 
 
@@ -105,6 +108,7 @@ if(BUILD_TESTING)
             tests/numeric/NumberUtilsTest.cpp
             tests/text/StringBuilderTest.cpp
             tests/time/TimeTest.cpp
+            tests/filter/ProfanityFilterTest.cpp
 
             include/concurrent/agrona/M2OConcurrentArrayQueue.h
             include/concurrent/agrona/M2ORingBuffer.h
@@ -125,6 +129,7 @@ if(BUILD_TESTING)
             include/network/IdGenerator.h
             include/time/Time.h
             include/file/Files.h
+            include/filter/ProfanityFilter.h
     )
 
     target_include_directories(common_tests PRIVATE
@@ -139,5 +144,32 @@ if(BUILD_TESTING)
 
     include(GoogleTest)
     gtest_discover_tests(common_tests)
+endif()
+
+#### Benchmarks
+option(BUILD_BENCHMARKS "Build benchmarks" OFF)
+
+if(BUILD_BENCHMARKS)
+    find_package(benchmark REQUIRED)
+
+    add_executable(common_benchmark
+            benchmark/BenchmarkMain.cpp
+            benchmark/ProfanityFilterBenchmark.cpp
+            include/filter/ProfanityFilter.h
+    )
+
+    target_include_directories(common_benchmark PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/benchmark
+    )
+
+    target_link_libraries(common_benchmark PRIVATE
+            benchmark::benchmark
+            aeron::aeron
+    )
+
+    target_compile_definitions(common_benchmark PRIVATE
+            PROFANITY_WORD_LIST_PATH="${CMAKE_CURRENT_SOURCE_DIR}/data/profanity_words.txt"
+    )
 endif()
 ############################################
