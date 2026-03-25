@@ -35,6 +35,10 @@ class ConanApplication(ConanFile):
     def package(self):
         cmake = CMake(self)
         cmake.install()
+        # Ensure data directory is packaged (cmake install may skip it for INTERFACE libraries)
+        from conan.tools.files import copy
+        copy(self, "*.txt", src=os.path.join(self.source_folder, "data"),
+             dst=os.path.join(self.package_folder, "data"))
 
     def package_info(self):
         self.cpp_info.set_property("cmake_target_name", "common")
