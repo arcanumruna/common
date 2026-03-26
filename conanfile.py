@@ -19,6 +19,11 @@ class ConanApplication(ConanFile):
         for requirement in requirements:
             self.requires(requirement)
 
+    def build_requirements(self):
+        test_requirements = self.conan_data.get('test_requirements', [])
+        for requirement in test_requirements:
+            self.test_requires(requirement)
+
     def generate(self):
         deps = CMakeDeps(self)
         deps.generate()
