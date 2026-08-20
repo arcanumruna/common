@@ -8,7 +8,7 @@ PACKAGE="common/${VERSION}@vradu/dev"
 echo "📦 Package: $PACKAGE"
 
 echo "🔧 Installing Conan dependencies..."
-conan install . --build=missing -s build_type=Release
+conan install . --build=missing -s build_type=Release --format=json > conan-graph.json
 
 echo "🏗️ Generating CMake build system..."
 cmake . -B build \
@@ -26,6 +26,8 @@ echo "📤 Exporting package to local cache..."
 conan export . --user=vradu --channel=dev
 
 echo "📤 Uploading to remote..."
+conan list --graph=conan-graph.json --graph-binaries=build --format=json > conan-pkglist.json
+conan upload --list=conan-pkglist.json --remote=artifactory -c
 conan upload "$PACKAGE" --remote=artifactory -c
 
 echo "✅ Done."

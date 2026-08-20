@@ -26,6 +26,8 @@ add_library(common INTERFACE
         include/time/Time.h
         include/file/Files.h
         include/filter/ProfanityFilter.h
+        include/diagnostics/JemallocCtl.h
+        include/diagnostics/DiagnosticsService.h
 )
 
 target_include_directories(common INTERFACE
@@ -58,7 +60,9 @@ add_library(common_dummy STATIC
         include/network/IdGenerator.h
         include/time/Time.h
         include/file/Files.h
-        include/filter/ProfanityFilter.h)
+        include/filter/ProfanityFilter.h
+        include/diagnostics/JemallocCtl.h
+        include/diagnostics/DiagnosticsService.h)
 
 target_include_directories(common_dummy PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -90,6 +94,7 @@ if(BUILD_TESTING)
     enable_testing()
 
     find_package(GTest REQUIRED)
+    find_package(nlohmann_json REQUIRED)
 
     add_executable(common_tests
             tests/network/RateLimiterTest.cpp
@@ -109,6 +114,7 @@ if(BUILD_TESTING)
             tests/text/StringBuilderTest.cpp
             tests/time/TimeTest.cpp
             tests/filter/ProfanityFilterTest.cpp
+            tests/diagnostics/DiagnosticsServiceTest.cpp
 
             include/concurrent/agrona/M2OConcurrentArrayQueue.h
             include/concurrent/agrona/M2ORingBuffer.h
@@ -130,6 +136,8 @@ if(BUILD_TESTING)
             include/time/Time.h
             include/file/Files.h
             include/filter/ProfanityFilter.h
+            include/diagnostics/JemallocCtl.h
+            include/diagnostics/DiagnosticsService.h
     )
 
     target_include_directories(common_tests PRIVATE
@@ -139,6 +147,7 @@ if(BUILD_TESTING)
 
     target_link_libraries(common_tests PUBLIC
             GTest::gtest_main
+            nlohmann_json::nlohmann_json
             aeron::aeron
     )
 
