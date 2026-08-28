@@ -88,3 +88,35 @@ TEST(RateLimiterTest, ViolationCountContinuesBeyond3) {
     EXPECT_EQ(limiter.allow(0), -3); // 4th violation still returns -3
     EXPECT_EQ(limiter.allow(0), -3); // 5th violation still returns -3
 }
+
+TEST(RateLimiterTest, BurstCapacityAbsorbsSpikeAboveRate) {
+    // rate=2/s but capacity=5: a 5-message burst is allowed even though it exceeds the sustained
+    // rate; the 6th (bucket empty) trips a violation.
+    RateLimiter limiter(2, milliseconds(1000), {}, 5);
+    for (int i = 0; i < 5; ++i) {
+        EXPECT_EQ(limiter.allow(0), 0);
+    }
+    EXPECT_EQ(limiter.allow(0), -1);
+}
+
+TEST(RateLimiterTest, BurstCapacityDefaultsToRate) {
+    // burstCapacity omitted (0) => capacity == rate: exactly `rate` messages, then a violation.
+    RateLimiter limiter(3, milliseconds(1000));
+    for (int i = 0; i < 3; ++i) {
+        EXPECT_EQ(limiter.allow(0), 0);
+    }
+    EXPECT_EQ(limiter.allow(0), -1);
+}
+
+TEST(RateLimiterTest, RefillsAtSustainedRateNotFullCapacity) {
+    // After draining a large burst, tokens come back at the sustained rate (2/s), NOT instantly to
+    // the full capacity — so one second later only ~2 are available, never the whole bucket of 6.
+    RateLimiter limiter(2, milliseconds(1000), {}, 6);
+    for (int i = 0; i < 6; ++i) limiter.allow(0);   // drain the bucket
+    EXPECT_NE(limiter.allow(0), 0);                 // empty -> violation
+    sleepMs(1000);                                  // refill at 2 tokens/sec
+    int allowed = 0;
+    while (limiter.allow(0) == 0) ++allowed;
+    EXPECT_GE(allowed, 1);
+    EXPECT_LT(allowed, 6);                          // gradual refill, not a reset-to-capacity
+}
