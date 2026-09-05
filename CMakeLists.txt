@@ -115,6 +115,7 @@ if(BUILD_TESTING)
             tests/time/TimeTest.cpp
             tests/filter/ProfanityFilterTest.cpp
             tests/diagnostics/DiagnosticsServiceTest.cpp
+            tests/crypto/SipHashTest.cpp
 
             include/concurrent/agrona/M2OConcurrentArrayQueue.h
             include/concurrent/agrona/M2ORingBuffer.h
