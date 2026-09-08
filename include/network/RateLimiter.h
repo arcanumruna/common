@@ -26,19 +26,23 @@ public:
     // Whitelisted message types bypass the limiter entirely (e.g. PONG/KEEPALIVE).
     //
     // Example: RateLimiter(30, ms(2000), { PONG }, 60)  // 30/s sustained, tolerate a 60-msg burst
+    //
+    // This is the original per-second flood-control constructor; behaviour is
+    // unchanged (it delegates to the generalized form with a 1000 ms period).
     explicit RateLimiter(std::uint32_t ratePerSecond,
                          ms violationWindow,
                          std::unordered_set<std::uint8_t> whitelist = {},
                          std::uint32_t burstCapacity = 0)
-        : ratePerSecond(ratePerSecond),
-          capacity(burstCapacity ? burstCapacity : ratePerSecond),
-          tokens(burstCapacity ? burstCapacity : ratePerSecond),
-          lastRefillTime(now()),
-          violationWindow(violationWindow),
-          violationCount(0),
-          lastActivityTime(lastRefillTime),
-          whitelist(std::move(whitelist))
-    {}
+        : RateLimiter(ratePerSecond, ms(1000), violationWindow, std::move(whitelist), burstCapacity) {}
+
+    // Generalized construction: `maxEvents` tokens replenished over an arbitrary
+    // `window` (so rates slower than 1/sec are expressible, e.g. 1 per minute or
+    // 5 per day). Capacity == maxEvents (no extra burst). Intended for simple
+    // per-key quotas via hasToken()/take()/millisUntilNextToken(); the
+    // message-type/violation/whitelist path (allow()) is not used in this mode.
+    static RateLimiter overWindow(std::uint32_t maxEvents, ms window) {
+        return RateLimiter(maxEvents, window, window, {}, maxEvents);
+    }
 
     // Returns:
     //  0 = allowed
@@ -70,8 +74,53 @@ public:
         return (now() - lastActivityTime) >= MIN_IDLE_TIME;
     }
 
+    // ---- Simple quota API (no violation tracking) --------------------------
+    // For period-based quotas composed by a caller (e.g. the reporting service
+    // combines a 1/min + 5/day + 20/week set). Check with hasToken() across the
+    // set, and only if all pass, take() from each — so a rejected request
+    // consumes nothing.
+
+    // Refill, then report whether at least one token is available (no consume).
+    [[nodiscard]] bool hasToken() {
+        refill(now());
+        return tokens > 0;
+    }
+
+    // Consume one token if present. Pair with a preceding hasToken() check.
+    void take() {
+        if (tokens > 0) --tokens;
+    }
+
+    // Milliseconds until the next token becomes available (0 if one is already
+    // available). Refills first so the estimate reflects the present.
+    [[nodiscard]] long long millisUntilNextToken() {
+        refill(now());
+        if (tokens > 0) return 0;
+        const std::int64_t per = tokensPerPeriod ? static_cast<std::int64_t>(tokensPerPeriod) : 1;
+        const std::int64_t need = periodMs - refillCarryMs;   // refillCarryMs ∈ [0, periodMs)
+        return static_cast<long long>((need + per - 1) / per);
+    }
+
 private:
-    const std::uint32_t ratePerSecond;   // sustained refill rate (tokens/sec)
+    // Generalized private constructor: `tokensPerPeriod` tokens per `period`.
+    RateLimiter(std::uint32_t tokensPerPeriod,
+                ms period,
+                ms violationWindow,
+                std::unordered_set<std::uint8_t> whitelist,
+                std::uint32_t burstCapacity)
+        : tokensPerPeriod(tokensPerPeriod),
+          periodMs(static_cast<std::int64_t>(period.count()) > 0 ? static_cast<std::int64_t>(period.count()) : 1),
+          capacity(burstCapacity ? burstCapacity : tokensPerPeriod),
+          tokens(burstCapacity ? burstCapacity : tokensPerPeriod),
+          lastRefillTime(now()),
+          violationWindow(violationWindow),
+          violationCount(0),
+          lastActivityTime(lastRefillTime),
+          whitelist(std::move(whitelist))
+    {}
+
+    const std::uint32_t tokensPerPeriod; // tokens replenished per `periodMs`
+    const std::int64_t periodMs;         // refill period in ms (1000 for the per-second ctor)
     const std::uint32_t capacity;        // bucket size (burst budget)
     std::uint32_t tokens;
 
@@ -89,9 +138,10 @@ private:
         return Clock::now();
     }
 
-    // Continuous refill: add ratePerSecond tokens/sec, saturating at capacity. Fractional
-    // tokens are carried across calls so many sub-second allow()s still refill at the right
-    // rate (a hard per-second reset let a client send up to 2x capacity across a window edge).
+    // Continuous refill: add tokensPerPeriod tokens per periodMs, saturating at capacity.
+    // Fractional tokens are carried across calls so many sub-period allow()s still refill at
+    // the right rate (a hard per-period reset let a client send up to 2x capacity across a
+    // window edge). With periodMs == 1000 this is exactly the original per-second behaviour.
     void refill(TimePoint currentTime) {
         const std::int64_t elapsedMs =
             std::chrono::duration_cast<ms>(currentTime - lastRefillTime).count();
@@ -99,10 +149,10 @@ private:
             return;
         }
         lastRefillTime = currentTime;
-        refillCarryMs += elapsedMs * static_cast<std::int64_t>(ratePerSecond);
-        const std::int64_t add = refillCarryMs / 1000;
+        refillCarryMs += elapsedMs * static_cast<std::int64_t>(tokensPerPeriod);
+        const std::int64_t add = refillCarryMs / periodMs;
         if (add > 0) {
-            refillCarryMs -= add * 1000;
+            refillCarryMs -= add * periodMs;
             const std::int64_t newTokens = static_cast<std::int64_t>(tokens) + add;
             tokens = static_cast<std::uint32_t>(
                 std::min<std::int64_t>(newTokens, static_cast<std::int64_t>(capacity)));

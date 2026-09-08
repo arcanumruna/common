@@ -120,3 +120,40 @@ TEST(RateLimiterTest, RefillsAtSustainedRateNotFullCapacity) {
     EXPECT_GE(allowed, 1);
     EXPECT_LT(allowed, 6);                          // gradual refill, not a reset-to-capacity
 }
+
+// ---- Generalized period-based quota API (overWindow / hasToken / take /
+//      millisUntilNextToken) — used by the reporting service to compose
+//      per-user 1/min + 5/day + 20/week limits. -----------------------------
+
+TEST(RateLimiterTest, OverWindowStartsFullAndDrains) {
+    auto limiter = RateLimiter::overWindow(3, milliseconds(1000)); // 3 per second
+    int taken = 0;
+    for (int i = 0; i < 3; ++i) {
+        ASSERT_TRUE(limiter.hasToken());
+        limiter.take();
+        ++taken;
+    }
+    EXPECT_EQ(taken, 3);
+    EXPECT_FALSE(limiter.hasToken());              // bucket empty
+    EXPECT_GT(limiter.millisUntilNextToken(), 0);  // must wait for a refill
+}
+
+TEST(RateLimiterTest, OverWindowRefillsAfterPeriod) {
+    auto limiter = RateLimiter::overWindow(1, milliseconds(200)); // 1 per 200ms
+    ASSERT_TRUE(limiter.hasToken());
+    limiter.take();
+    EXPECT_FALSE(limiter.hasToken());
+    sleepMs(220);
+    EXPECT_TRUE(limiter.hasToken());               // one token back after the window
+}
+
+TEST(RateLimiterTest, OverWindowSlowerThanOnePerSecond) {
+    // The original per-second ctor cannot express this; overWindow can.
+    auto limiter = RateLimiter::overWindow(1, milliseconds(60'000)); // 1 per minute
+    ASSERT_TRUE(limiter.hasToken());
+    limiter.take();
+    EXPECT_FALSE(limiter.hasToken());
+    const long long wait = limiter.millisUntilNextToken();
+    EXPECT_GT(wait, 0);
+    EXPECT_LE(wait, 60'000);
+}
