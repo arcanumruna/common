@@ -68,6 +68,72 @@ TEST(SnapshotStoreTest, CeilReturnsFalseWhenAllBefore) {
     EXPECT_FALSE(store.ceil(50, out)); // all timestamps < 50
 }
 
+TEST(SnapshotStoreTest, FloorEntryReturnsTimestampAndValue) {
+    Store4 store;
+    store.addSnapshot(10, 100);
+    store.addSnapshot(20, 200);
+    store.addSnapshot(30, 300);
+
+    const Store4::Entry* e = nullptr;
+    ASSERT_TRUE(store.floorEntry(25, e));
+    EXPECT_EQ(e->timestamp, 20); // greatest <= 25
+    EXPECT_EQ(e->value, 200);
+
+    ASSERT_TRUE(store.floorEntry(30, e));
+    EXPECT_EQ(e->timestamp, 30); // exact match
+    EXPECT_EQ(e->value, 300);
+}
+
+TEST(SnapshotStoreTest, FloorEntryReturnsFalseWhenAllAfter) {
+    Store4 store;
+    store.addSnapshot(10, 100);
+    const Store4::Entry* e = nullptr;
+    EXPECT_FALSE(store.floorEntry(5, e));
+}
+
+TEST(SnapshotStoreTest, CeilEntryReturnsTimestampAndValue) {
+    Store4 store;
+    store.addSnapshot(10, 100);
+    store.addSnapshot(20, 200);
+    store.addSnapshot(30, 300);
+
+    const Store4::Entry* e = nullptr;
+    ASSERT_TRUE(store.ceilEntry(15, e));
+    EXPECT_EQ(e->timestamp, 20); // smallest >= 15
+    EXPECT_EQ(e->value, 200);
+
+    ASSERT_TRUE(store.ceilEntry(10, e));
+    EXPECT_EQ(e->timestamp, 10); // exact match
+    EXPECT_EQ(e->value, 100);
+}
+
+TEST(SnapshotStoreTest, CeilEntryReturnsFalseWhenAllBefore) {
+    Store4 store;
+    store.addSnapshot(10, 100);
+    const Store4::Entry* e = nullptr;
+    EXPECT_FALSE(store.ceilEntry(50, e));
+}
+
+TEST(SnapshotStoreTest, FloorAndCeilEntryBracketForInterpolation) {
+    // The lag-comp use case: floorEntry + ceilEntry bracket a query time so
+    // the caller can linear-interpolate between the two samples' timestamps.
+    Store4 store;
+    store.addSnapshot(0, 0);
+    store.addSnapshot(100, 10);
+    store.addSnapshot(200, 20);
+
+    const Store4::Entry* lo = nullptr;
+    const Store4::Entry* hi = nullptr;
+    ASSERT_TRUE(store.floorEntry(150, lo));
+    ASSERT_TRUE(store.ceilEntry(150, hi));
+    EXPECT_EQ(lo->timestamp, 100);
+    EXPECT_EQ(hi->timestamp, 200);
+    // fraction = (150-100)/(200-100) = 0.5 → value ≈ 10 + 0.5*(20-10) = 15
+    const double frac = static_cast<double>(150 - lo->timestamp) /
+                        static_cast<double>(hi->timestamp - lo->timestamp);
+    EXPECT_DOUBLE_EQ(lo->value + frac * (hi->value - lo->value), 15.0);
+}
+
 TEST(SnapshotStoreTest, GetLastSnapshotReturnsMostRecent) {
     Store4 store;
     store.addSnapshot(1, 11);
