@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <unordered_set>
 
 class RateLimiter {
@@ -10,6 +11,10 @@ public:
     using Clock = std::chrono::steady_clock;
     using TimePoint = Clock::time_point;
     using ms = std::chrono::milliseconds;
+
+    // Injectable clock (tests use a fake one). Defaults to steady_clock.
+    using NowFn = std::function<TimePoint()>;
+    static TimePoint steadyNow() { return Clock::now(); }
 
     static constexpr ms MIN_IDLE_TIME = ms(60'000); // 1 minute
 
@@ -32,16 +37,18 @@ public:
     explicit RateLimiter(std::uint32_t ratePerSecond,
                          ms violationWindow,
                          std::unordered_set<std::uint8_t> whitelist = {},
-                         std::uint32_t burstCapacity = 0)
-        : RateLimiter(ratePerSecond, ms(1000), violationWindow, std::move(whitelist), burstCapacity) {}
+                         std::uint32_t burstCapacity = 0,
+                         NowFn nowFn = &RateLimiter::steadyNow)
+        : RateLimiter(ratePerSecond, ms(1000), violationWindow, std::move(whitelist), burstCapacity,
+                      std::move(nowFn)) {}
 
     // Generalized construction: `maxEvents` tokens replenished over an arbitrary
     // `window` (so rates slower than 1/sec are expressible, e.g. 1 per minute or
     // 5 per day). Capacity == maxEvents (no extra burst). Intended for simple
     // per-key quotas via hasToken()/take()/millisUntilNextToken(); the
     // message-type/violation/whitelist path (allow()) is not used in this mode.
-    static RateLimiter overWindow(std::uint32_t maxEvents, ms window) {
-        return RateLimiter(maxEvents, window, window, {}, maxEvents);
+    static RateLimiter overWindow(std::uint32_t maxEvents, ms window, NowFn nowFn = &RateLimiter::steadyNow) {
+        return RateLimiter(maxEvents, window, window, {}, maxEvents, std::move(nowFn));
     }
 
     // Returns:
@@ -91,6 +98,13 @@ public:
         if (tokens > 0) --tokens;
     }
 
+    // Refill, then report whether the bucket is completely full (nothing consumed
+    // and nothing owed). Used by KeyedRateLimiter to decide a key is evictable.
+    [[nodiscard]] bool isFull() {
+        refill(now());
+        return tokens >= capacity;
+    }
+
     // Milliseconds until the next token becomes available (0 if one is already
     // available). Refills first so the estimate reflects the present.
     [[nodiscard]] long long millisUntilNextToken() {
@@ -107,8 +121,10 @@ private:
                 ms period,
                 ms violationWindow,
                 std::unordered_set<std::uint8_t> whitelist,
-                std::uint32_t burstCapacity)
-        : tokensPerPeriod(tokensPerPeriod),
+                std::uint32_t burstCapacity,
+                NowFn nowFn)
+        : nowFn_(nowFn ? std::move(nowFn) : NowFn(&RateLimiter::steadyNow)),
+          tokensPerPeriod(tokensPerPeriod),
           periodMs(static_cast<std::int64_t>(period.count()) > 0 ? static_cast<std::int64_t>(period.count()) : 1),
           capacity(burstCapacity ? burstCapacity : tokensPerPeriod),
           tokens(burstCapacity ? burstCapacity : tokensPerPeriod),
@@ -119,6 +135,7 @@ private:
           whitelist(std::move(whitelist))
     {}
 
+    NowFn nowFn_;                        // declared first: used by later member initialisers
     const std::uint32_t tokensPerPeriod; // tokens replenished per `periodMs`
     const std::int64_t periodMs;         // refill period in ms (1000 for the per-second ctor)
     const std::uint32_t capacity;        // bucket size (burst budget)
@@ -134,8 +151,8 @@ private:
 
     const std::unordered_set<std::uint8_t> whitelist;
 
-    static inline TimePoint now() {
-        return Clock::now();
+    TimePoint now() const {
+        return nowFn_();
     }
 
     // Continuous refill: add tokensPerPeriod tokens per periodMs, saturating at capacity.

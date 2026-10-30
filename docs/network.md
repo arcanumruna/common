@@ -259,6 +259,31 @@ if (result == -3) {
 }
 ```
 
+### Injectable clock
+
+All constructors (and `RateLimiter::overWindow`) take an optional trailing `NowFn` (`std::function<time_point()>`, default `RateLimiter::steadyNow`) so tests can drive time without sleeping. Existing call sites are unchanged.
+
+---
+
+## `KeyedRateLimiter<Key, Hash, Eq>`
+
+**Header:** `include/network/KeyedRateLimiter.h` -- **not thread-safe** (like `RateLimiter`).
+
+Per-key (per-IP / per-name) quota. Each key lazily gets an `overWindow(maxEvents, window)` bucket sharing one clock.
+
+```cpp
+KeyedRateLimiter<std::string> lim(20, std::chrono::seconds(60) /*, maxKeys=65536, idleEvict=60s, now*/);
+if (!lim.tryAcquire(ip)) reject();        // check + take in one step
+lim.lockFor(ip, std::chrono::seconds(60)); // exact lock; isLocked(ip) until now >= lockUntil
+```
+
+- `hasToken(key) const` / `millisUntilNextToken(key) const` never insert or consume. `take(key)` consumes and returns `bool` (`[[nodiscard]]`): `false` means a new key was rejected at the cap (nothing consumed, counted in `rejectedNewKeys()`).
+- `hasToken` on an unknown key at the cap returns `false` (fail closed), unless the throttled cap-time prune is due; then it returns `true` and the following `take`/`tryAcquire` prunes and still fails closed if the map is full. Always check `take()`'s result, or prefer `tryAcquire`.
+- `lockFor` never drops a lock: at the cap it prunes, else evicts a victim (idle/full-bucket first, oldest next, soonest-expiring lock only if everything is locked). It never shortens an existing longer lock; a duration <= 0 is a no-op.
+- `tryAcquire` on a locked key returns false and consumes nothing.
+- `prune()` evicts keys that are idle (bucket full, not locked, untouched >= `idleEvict`); it also runs automatically about every `idleEvict/4`.
+- At `maxKeys`: prune first, and if still full new keys are rejected (fail closed, `tryAcquire` returns false) and counted in `rejectedNewKeys()`. Existing keys keep working.
+
 ---
 
 ## `SnapshotStore<T, Capacity>`

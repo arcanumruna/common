@@ -16,6 +16,7 @@ add_library(common INTERFACE
         include/numeric/NumberUtils.h
         include/network/MessageBatchView.h
         include/network/RateLimiter.h
+        include/network/KeyedRateLimiter.h
         include/network/FrameSyncBackoffIdleStrategy.h
         include/network/FrameSyncIdleStrategy.h
         include/configuration/Configuration.h
@@ -51,6 +52,7 @@ add_library(common_dummy STATIC
         include/numeric/NumberUtils.h
         include/network/MessageBatchView.h
         include/network/RateLimiter.h
+        include/network/KeyedRateLimiter.h
         include/network/FrameSyncBackoffIdleStrategy.h
         include/network/FrameSyncIdleStrategy.h
         include/configuration/Configuration.h
@@ -98,6 +100,7 @@ if(BUILD_TESTING)
 
     add_executable(common_tests
             tests/network/RateLimiterTest.cpp
+            tests/network/KeyedRateLimiterTest.cpp
             tests/network/FrameSyncIdleStrategyTest.cpp
             tests/network/MessageBatchViewTest.cpp
             tests/network/RunningAvgTest.cpp
@@ -127,6 +130,7 @@ if(BUILD_TESTING)
             include/numeric/NumberUtils.h
             include/network/MessageBatchView.h
             include/network/RateLimiter.h
+            include/network/KeyedRateLimiter.h
             include/network/FrameSyncBackoffIdleStrategy.h
             include/network/FrameSyncIdleStrategy.h
             include/configuration/Configuration.h
