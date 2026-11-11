@@ -11,6 +11,7 @@ add_library(common INTERFACE
         include/concurrent/agrona/O2ORingBuffer.h
         include/concurrent/agrona/AgronaAtomicBuffer.h
         include/concurrent/agrona/AgronaRingBufferDescriptor.h
+        include/concurrent/agrona/AgronaRecordDescriptor.h
         include/flow/ScopeExit.h
         include/text/StringBuilder.h
         include/numeric/NumberUtils.h
@@ -47,6 +48,7 @@ add_library(common_dummy STATIC
         include/concurrent/agrona/O2ORingBuffer.h
         include/concurrent/agrona/AgronaAtomicBuffer.h
         include/concurrent/agrona/AgronaRingBufferDescriptor.h
+        include/concurrent/agrona/AgronaRecordDescriptor.h
         include/flow/ScopeExit.h
         include/text/StringBuilder.h
         include/numeric/NumberUtils.h
@@ -119,12 +121,15 @@ if(BUILD_TESTING)
             tests/filter/ProfanityFilterTest.cpp
             tests/diagnostics/DiagnosticsServiceTest.cpp
             tests/crypto/SipHashTest.cpp
+            tests/concurrent/RingBufferTest.cpp
 
             include/concurrent/agrona/M2OConcurrentArrayQueue.h
             include/concurrent/agrona/M2ORingBuffer.h
             include/concurrent/agrona/O2ORingBuffer.h
             include/concurrent/agrona/AgronaAtomicBuffer.h
             include/concurrent/agrona/AgronaRingBufferDescriptor.h
+            include/concurrent/agrona/AgronaRecordDescriptor.h
+        include/concurrent/agrona/AgronaRecordDescriptor.h
             include/flow/ScopeExit.h
             include/text/StringBuilder.h
             include/numeric/NumberUtils.h
