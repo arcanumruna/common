@@ -4,29 +4,29 @@
 #include "Aeron.h"
 #include "concurrent/agrona/AgronaAtomicBuffer.h"
 #include "concurrent/agrona/AgronaRingBufferDescriptor.h"
-#include "concurrent/ringbuffer/RecordDescriptor.h"
+#include "concurrent/agrona/AgronaRecordDescriptor.h"
 #include "flow/ScopeExit.h"
 
 namespace agrona::concurrent::ringbuffer {
     class O2ORingBuffer {
     public:
-        static constexpr aeron::util::index_t MIN_CAPACITY = aeron::ringbuffer::RecordDescriptor::HEADER_LENGTH * 2;
+        static constexpr aeron::util::index_t MIN_CAPACITY = AgronaRecordDescriptor::HEADER_LENGTH * 2;
         static constexpr aeron::util::index_t INSUFFICIENT_CAPACITY = -2;
 
         explicit O2ORingBuffer(std::uint8_t *buffer, std::size_t length) : backingBuffer_(buffer, length),
                                                                            m_buffer(backingBuffer_) {
-            m_capacity = m_buffer.capacity() - aeron::ringbuffer::RingBufferDescriptor::TRAILER_LENGTH;
+            m_capacity = m_buffer.capacity() - AgronaRingBufferDescriptor::TRAILER_LENGTH;
 
-            aeron::ringbuffer::RingBufferDescriptor::checkCapacity(m_capacity);
+            AgronaRingBufferDescriptor::checkCapacity(m_capacity);
 
             m_maxMsgLength = m_capacity / 8;
 
-            m_tailPositionIndex = m_capacity + aeron::ringbuffer::RingBufferDescriptor::TAIL_POSITION_OFFSET;
-            m_headCachePositionIndex = m_capacity + aeron::ringbuffer::RingBufferDescriptor::HEAD_CACHE_POSITION_OFFSET;
-            m_headPositionIndex = m_capacity + aeron::ringbuffer::RingBufferDescriptor::HEAD_POSITION_OFFSET;
+            m_tailPositionIndex = m_capacity + AgronaRingBufferDescriptor::TAIL_POSITION_OFFSET;
+            m_headCachePositionIndex = m_capacity + AgronaRingBufferDescriptor::HEAD_CACHE_POSITION_OFFSET;
+            m_headPositionIndex = m_capacity + AgronaRingBufferDescriptor::HEAD_POSITION_OFFSET;
             m_correlationIdCounterIndex =
-                    m_capacity + aeron::ringbuffer::RingBufferDescriptor::CORRELATION_COUNTER_OFFSET;
-            m_consumerHeartbeatIndex = m_capacity + aeron::ringbuffer::RingBufferDescriptor::CONSUMER_HEARTBEAT_OFFSET;
+                    m_capacity + AgronaRingBufferDescriptor::CORRELATION_COUNTER_OFFSET;
+            m_consumerHeartbeatIndex = m_capacity + AgronaRingBufferDescriptor::CONSUMER_HEARTBEAT_OFFSET;
         }
 
         O2ORingBuffer(const O2ORingBuffer &) = delete;
@@ -38,29 +38,29 @@ namespace agrona::concurrent::ringbuffer {
         }
 
         [[nodiscard]] aeron::util::index_t tryClaim(std::int32_t msgTypeId, size_t length) const {
-            aeron::ringbuffer::RecordDescriptor::checkMsgTypeId(msgTypeId);
+            AgronaRecordDescriptor::checkMsgTypeId(msgTypeId);
             checkMsgLength(length);
 
             AgronaAtomicBuffer& buffer = m_buffer;
-            const aeron::util::index_t recordLength = length + aeron::ringbuffer::RecordDescriptor::HEADER_LENGTH;
+            const aeron::util::index_t recordLength = length + AgronaRecordDescriptor::HEADER_LENGTH;
             const aeron::util::index_t recordIndex = claimCapacity(buffer, recordLength);
 
             if (INSUFFICIENT_CAPACITY == recordIndex) {
                 return recordIndex;
             }
 
-            m_buffer.putInt32Ordered(aeron::ringbuffer::RecordDescriptor::lengthOffset(recordIndex), -recordLength);
+            m_buffer.putInt32Ordered(AgronaRecordDescriptor::lengthOffset(recordIndex), -recordLength);
             std::atomic_thread_fence(std::memory_order_release);
-            m_buffer.putInt32(aeron::ringbuffer::RecordDescriptor::typeOffset(recordIndex), msgTypeId);
+            m_buffer.putInt32(AgronaRecordDescriptor::typeOffset(recordIndex), msgTypeId);
 
-            return aeron::ringbuffer::RecordDescriptor::encodedMsgOffset(recordIndex);
+            return AgronaRecordDescriptor::encodedMsgOffset(recordIndex);
         }
 
         void commit(aeron::util::index_t index) const {
             const aeron::util::index_t recordIndex = computeRecordIndex(index);
             AgronaAtomicBuffer& buffer = m_buffer;
             const std::int32_t recordLength = verifyClaimedSpaceNotReleased(recordIndex);
-            buffer.putInt32Ordered(aeron::ringbuffer::RecordDescriptor::lengthOffset(recordIndex), -recordLength);
+            buffer.putInt32Ordered(AgronaRecordDescriptor::lengthOffset(recordIndex), -recordLength);
         }
 
         void abort(aeron::util::index_t index) const {
@@ -68,9 +68,9 @@ namespace agrona::concurrent::ringbuffer {
             AgronaAtomicBuffer& buffer = m_buffer;
             const std::int32_t recordLength = verifyClaimedSpaceNotReleased(recordIndex);
 
-            buffer.putInt32(aeron::ringbuffer::RecordDescriptor::typeOffset(recordIndex),
-                              aeron::ringbuffer::RecordDescriptor::PADDING_MSG_TYPE_ID);
-            buffer.putInt32Ordered(aeron::ringbuffer::RecordDescriptor::lengthOffset(recordIndex), -recordLength);
+            buffer.putInt32(AgronaRecordDescriptor::typeOffset(recordIndex),
+                              AgronaRecordDescriptor::PADDING_MSG_TYPE_ID);
+            buffer.putInt32Ordered(AgronaRecordDescriptor::lengthOffset(recordIndex), -recordLength);
         }
 
         // BUG-M23 fix: Template for inlining + zero memory on read (match M2ORingBuffer)
@@ -99,27 +99,27 @@ namespace agrona::concurrent::ringbuffer {
             while ((bytesRead < contiguousBlockLength) && (messagesRead < messageCountLimit)) {
                 const int recordIndex = headIndex + bytesRead;
                 const int recordLength = buffer.getInt32Volatile(
-                    aeron::ringbuffer::RecordDescriptor::lengthOffset(recordIndex));
+                    AgronaRecordDescriptor::lengthOffset(recordIndex));
 
                 if (recordLength <= 0) {
                     break;
                 }
 
                 const int alignedLength = align(
-                    recordLength, aeron::ringbuffer::RecordDescriptor::ALIGNMENT);
+                    recordLength, AgronaRecordDescriptor::ALIGNMENT);
                 bytesRead += alignedLength;
 
                 const int msgTypeId = buffer.getInt32(
-                    aeron::ringbuffer::RecordDescriptor::typeOffset(recordIndex));
-                if (aeron::ringbuffer::RecordDescriptor::PADDING_MSG_TYPE_ID == msgTypeId) {
+                    AgronaRecordDescriptor::typeOffset(recordIndex));
+                if (AgronaRecordDescriptor::PADDING_MSG_TYPE_ID == msgTypeId) {
                     continue;
                 }
 
                 handler(
                     msgTypeId,
                     buffer,
-                    aeron::ringbuffer::RecordDescriptor::encodedMsgOffset(recordIndex),
-                    recordLength - aeron::ringbuffer::RecordDescriptor::HEADER_LENGTH
+                    AgronaRecordDescriptor::encodedMsgOffset(recordIndex),
+                    recordLength - AgronaRecordDescriptor::HEADER_LENGTH
                 );
                 ++messagesRead;
             }
@@ -150,27 +150,27 @@ namespace agrona::concurrent::ringbuffer {
             while ((bytesRead < contiguousBlockLength) && (messagesRead < messageCountLimit)) {
                 const std::int32_t recordIndex = headIndex + bytesRead;
                 const std::int32_t recordLength = buffer.getInt32Volatile(
-                    aeron::ringbuffer::RecordDescriptor::lengthOffset(recordIndex));
+                    AgronaRecordDescriptor::lengthOffset(recordIndex));
 
                 if (recordLength <= 0) {
                     break;
                 }
 
                 const std::int32_t alignedLength = align(
-                    recordLength, aeron::ringbuffer::RecordDescriptor::ALIGNMENT);
+                    recordLength, AgronaRecordDescriptor::ALIGNMENT);
                 bytesRead += alignedLength;
 
                 const std::int32_t messageTypeId = buffer.getInt32(
-                    aeron::ringbuffer::RecordDescriptor::typeOffset(recordIndex));
-                if (messageTypeId == aeron::ringbuffer::RecordDescriptor::PADDING_MSG_TYPE_ID) {
+                    AgronaRecordDescriptor::typeOffset(recordIndex));
+                if (messageTypeId == AgronaRecordDescriptor::PADDING_MSG_TYPE_ID) {
                     continue;
                 }
 
                 const ControlledAction action = handler(
                     messageTypeId,
                     buffer,
-                    aeron::ringbuffer::RecordDescriptor::encodedMsgOffset(recordIndex),
-                    recordLength - aeron::ringbuffer::RecordDescriptor::HEADER_LENGTH);
+                    AgronaRecordDescriptor::encodedMsgOffset(recordIndex),
+                    recordLength - AgronaRecordDescriptor::HEADER_LENGTH);
 
                 if (action == ControlledAction::ABORT) {
                     bytesRead -= alignedLength;
@@ -242,9 +242,9 @@ namespace agrona::concurrent::ringbuffer {
 
         aeron::util::index_t claimCapacity(AgronaAtomicBuffer &buffer, std::int32_t recordLength) const {
             const std::int32_t alignedRecordLength =
-                    align(recordLength, aeron::ringbuffer::RecordDescriptor::ALIGNMENT);
+                    align(recordLength, AgronaRecordDescriptor::ALIGNMENT);
             const std::int32_t requiredCapacity =
-                    alignedRecordLength + aeron::ringbuffer::RecordDescriptor::HEADER_LENGTH;
+                    alignedRecordLength + AgronaRecordDescriptor::HEADER_LENGTH;
             const std::int32_t capacity = m_capacity;
             const std::int32_t tailPositionIndex = m_tailPositionIndex;
             const std::int32_t headCachePositionIndex = m_headCachePositionIndex;
@@ -297,11 +297,11 @@ namespace agrona::concurrent::ringbuffer {
 
             if (0 != padding) {
                 buffer.putInt64(0, 0L);
-                buffer.putInt32Ordered(aeron::ringbuffer::RecordDescriptor::lengthOffset(recordIndex), -padding);
+                buffer.putInt32Ordered(AgronaRecordDescriptor::lengthOffset(recordIndex), -padding);
                 std::atomic_thread_fence(std::memory_order_release);
-                buffer.putInt32(aeron::ringbuffer::RecordDescriptor::typeOffset(recordIndex),
-                                aeron::ringbuffer::RecordDescriptor::PADDING_MSG_TYPE_ID);
-                buffer.putInt32Ordered(aeron::ringbuffer::RecordDescriptor::lengthOffset(recordIndex), padding);
+                buffer.putInt32(AgronaRecordDescriptor::typeOffset(recordIndex),
+                                AgronaRecordDescriptor::PADDING_MSG_TYPE_ID);
+                buffer.putInt32Ordered(AgronaRecordDescriptor::lengthOffset(recordIndex), padding);
             }
 
             if (INSUFFICIENT_CAPACITY != writeIndex) {
@@ -323,8 +323,8 @@ namespace agrona::concurrent::ringbuffer {
         }
 
         [[nodiscard]] inline aeron::util::index_t computeRecordIndex(aeron::util::index_t index) const {
-            const aeron::util::index_t recordIndex = index - aeron::ringbuffer::RecordDescriptor::HEADER_LENGTH;
-            if (recordIndex < 0 || recordIndex > (m_capacity - aeron::ringbuffer::RecordDescriptor::HEADER_LENGTH)) {
+            const aeron::util::index_t recordIndex = index - AgronaRecordDescriptor::HEADER_LENGTH;
+            if (recordIndex < 0 || recordIndex > (m_capacity - AgronaRecordDescriptor::HEADER_LENGTH)) {
                 throw aeron::util::IllegalArgumentException("Invalid message index: " + std::to_string(index),
                                                             SOURCEINFO);
             }
@@ -333,15 +333,15 @@ namespace agrona::concurrent::ringbuffer {
 
         [[nodiscard]] inline std::int32_t verifyClaimedSpaceNotReleased(aeron::util::index_t recordIndex) const {
             const std::int32_t recordLength = m_buffer.getInt32(
-                aeron::ringbuffer::RecordDescriptor::lengthOffset(recordIndex));
+                AgronaRecordDescriptor::lengthOffset(recordIndex));
             if (recordLength < 0) {
                 return recordLength;
             }
 
-            const std::int32_t typeId = m_buffer.getInt32(aeron::ringbuffer::RecordDescriptor::typeOffset(recordIndex));
+            const std::int32_t typeId = m_buffer.getInt32(AgronaRecordDescriptor::typeOffset(recordIndex));
             throw aeron::util::IllegalStateException(
                 "claimed space previously " + std::string(
-                    typeId == aeron::ringbuffer::RecordDescriptor::PADDING_MSG_TYPE_ID
+                    typeId == AgronaRecordDescriptor::PADDING_MSG_TYPE_ID
                         ? "aborted"
                         : "committed"),
                 SOURCEINFO);
